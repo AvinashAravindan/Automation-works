@@ -196,6 +196,5 @@ Cancel Booking
 
 ## 🧑‍💻 Author
 
-Avinash Ara
-Automation Engineer — RaphaCure
+Avinash Aravindhan
 Tech Stack: Google Apps Script, Workflows, Webhooks, API Automation, Cloud Integration
