@@ -1,0 +1,213 @@
+const SPREADSHEET_ID = "1IzCxfkjsDFraAPcqRHFIm4m_11KsP4J9htI1wZHWwbM";
+
+// Allowed canonical sheet names (only these can be created/written)
+const ALLOWED_SHEETS = [
+  "OPD Consultation",
+  "Diagnostic Booking",
+  "Virtual Consultation",
+  "Package Booking",
+  "Radiology Booking",
+  "Misc"
+];
+
+function normalizeForCompare(s) {
+  if (s === null || s === undefined) return "";
+  return String(s).replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\u00A0/g, " ").trim().toLowerCase();
+}
+
+function normalizeHeaderName(h) {
+  if (h === null || h === undefined) return "";
+  return String(h).trim().toLowerCase().replace(/\u00A0/g, " ").replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\s+/g,"_");
+}
+
+/** Extracts a usable type value from booking.type which may be string or object */
+function extractTypeValue(typeField) {
+  if (!typeField) return "";
+  if (typeof typeField === "object") {
+    if (typeField.value) return String(typeField.value);
+    if (typeField.name) return String(typeField.name);
+    return JSON.stringify(typeField);
+  }
+  return String(typeField);
+}
+
+/** Map incoming booking type (internal value or display name) -> allowed sheet name */
+function getSheetName(bookingType) {
+  if (!bookingType) return "Misc";
+
+  // extract if object
+  let raw = extractTypeValue(bookingType);
+
+  const t = raw.replace(/[\u200B-\u200D\uFEFF]/g, "")
+               .replace(/\u00A0/g, " ")
+               .trim()
+               .toLowerCase()
+               .replace(/\s+/g, "_");
+
+  const map = {
+    // OPD
+    "opd_consultation": "OPD Consultation",
+    "opd": "OPD Consultation",
+    "opd_consultation_booking": "OPD Consultation",
+
+    // Diagnostic
+    "diagnostic": "Diagnostic Booking",
+    "diagnostic_booking": "Diagnostic Booking",
+
+    // Virtual
+    "virtual": "Virtual Consultation",
+    "virtual_consultation": "Virtual Consultation",
+
+    // Package
+    "package": "Package Booking",
+    "package_booking": "Package Booking",
+
+    // Radiology - include internal values like ctmri
+    "ctmri": "Radiology Booking",
+    "ct_mri": "Radiology Booking",
+    "radiology": "Radiology Booking",
+    "radiology_booking": "Radiology Booking",
+    "xray": "Radiology Booking",
+    "ultrasound": "Radiology Booking",
+    "ct": "Radiology Booking",
+    "mri": "Radiology Booking",
+
+    // other known internal keys -> map to Misc (or extend)
+    "pharmacy": "Misc",
+    "gym": "Misc",
+    "ambu": "Misc",
+    "dental_care": "Misc",
+    "eye_care": "Misc",
+    "blood": "Misc",
+    "dc": "Misc",
+    "wc": "Misc",
+    "sec_opinion_booking": "Misc",
+    "ohc_booking": "Misc",
+    "test_booking": "Misc"
+  };
+
+  const mapped = map[t];
+  if (mapped && ALLOWED_SHEETS.indexOf(mapped) !== -1) return mapped;
+
+  if (t.indexOf("opd") !== -1) return "OPD Consultation";
+  if (t.indexOf("diagnostic") !== -1) return "Diagnostic Booking";
+  if (t.indexOf("virtual") !== -1) return "Virtual Consultation";
+  if (t.indexOf("package") !== -1) return "Package Booking";
+  if (t.indexOf("ct") !== -1 || t.indexOf("mri") !== -1 || t.indexOf("radio") !== -1) return "Radiology Booking";
+
+  return "Misc";
+}
+
+function jsonResponse(obj, code) {
+  code = code || 200;
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  const debug = { ok:false, sheet:null, action:null, row:null, errors:null, incoming_type_raw:null, resolved_sheet:null };
+
+  try {
+    const bodyText = e && e.postData && e.postData.contents ? e.postData.contents : "{}";
+    const payload = JSON.parse(bodyText);
+    const booking = payload.booking || payload;
+
+    debug.incoming_type_raw = booking.type;
+
+    const bookingId = String(booking.booking_id || booking.id || "").trim();
+    if (!bookingId) {
+      debug.errors = "missing booking_id";
+      return jsonResponse(debug, 400);
+    }
+
+    const sheetName = getSheetName(booking.type || booking.booking_type || booking.type_name || "");
+    debug.resolved_sheet = sheetName;
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let sheet = ss.getSheetByName(sheetName);
+
+    if (!sheet) {
+      if (ALLOWED_SHEETS.indexOf(sheetName) !== -1) {
+        sheet = ss.insertSheet(sheetName);
+        sheet.appendRow([
+          "booking_id","type","visit_type","doctor","vendor","name","tat","age","gender",
+          "phone","scheduled_date","scheduled_slot","status","client","package","priority",
+          "assigned_to","created_at","updated_at","changed_fields"
+        ]);
+      } else {
+        debug.errors = "resolved sheet not allowed: " + sheetName;
+        return jsonResponse(debug, 500);
+      }
+    }
+
+    const data = sheet.getDataRange().getValues();
+    const headersRow = data[0] || [];
+    const headerIdx = {};
+    headersRow.forEach((h,i)=> headerIdx[normalizeHeaderName(h)] = i);
+
+    const now = new Date().toISOString();
+    const rowObj = {
+      booking_id: bookingId,
+      type: booking.type || "",
+      visit_type: booking.visit_type || "",
+      doctor: booking.doctor || "",
+      vendor: booking.vendor || "",
+      name: booking.name || "",
+      tat: booking.tat || "",
+      age: booking.age || "",
+      gender: booking.gender || "",
+      phone: booking.phone || "",
+      scheduled_date: booking.scheduled_date || booking.schedulled_date || "",
+      scheduled_slot: booking.scheduled_slot || booking.schedulled_slot || "",
+      status: booking.status || "",
+      client: booking.client || "",
+      package: booking.package || "",
+      priority: booking.priority || "",
+      assigned_to: booking.assigned_to || ""
+    };
+
+    const normIncomingId = normalizeForCompare(bookingId);
+    let foundRow = -1;
+    for (let r=1;r<data.length;r++){
+      const cell = String(data[r][0] || "");
+      if (normalizeForCompare(cell) === normIncomingId) { foundRow = r+1; break; }
+    }
+
+    if (foundRow === -1) {
+      const appendRow = [
+        rowObj.booking_id, rowObj.type, rowObj.visit_type, rowObj.doctor, rowObj.vendor,
+        rowObj.name, rowObj.tat, rowObj.age, rowObj.gender, rowObj.phone,
+        rowObj.scheduled_date, rowObj.scheduled_slot, rowObj.status, rowObj.client,
+        rowObj.package, rowObj.priority, rowObj.assigned_to, now, now, ""
+      ];
+      sheet.appendRow(appendRow);
+      debug.ok = true; debug.action = "appended"; debug.row = sheet.getLastRow();
+      return jsonResponse(debug,200);
+    }
+
+    const existingRow = sheet.getRange(foundRow,1,1,headersRow.length).getValues()[0];
+    const changes = [];
+    Object.keys(rowObj).forEach(k=>{
+      const idx = headerIdx[normalizeHeaderName(k)];
+      if (idx !== undefined) {
+        const oldVal = String(existingRow[idx] || "");
+        const newVal = String(rowObj[k] || "");
+        if (normalizeForCompare(oldVal) !== normalizeForCompare(newVal)) {
+          changes.push({field:k, old:oldVal, new:newVal});
+          existingRow[idx] = rowObj[k] || "";
+        }
+      }
+    });
+
+    if (headerIdx["updated_at"] !== undefined) existingRow[headerIdx["updated_at"]] = now;
+    if (headerIdx["changed_fields"] !== undefined) existingRow[headerIdx["changed_fields"]] = changes.map(c=>c.field).join(",");
+
+    sheet.getRange(foundRow,1,1,existingRow.length).setValues([existingRow]);
+    debug.ok = true; debug.action = ( (rowObj.status||"").toLowerCase().includes("cancel") ? "cancelled" : (changes.length>0 ? "updated":"no_change") );
+    debug.row = foundRow;
+    debug.changed = changes;
+    return jsonResponse(debug,200);
+
+  } catch (err) {
+    return jsonResponse({ok:false, errors:String(err)},500);
+  }
+}
