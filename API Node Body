@@ -1,0 +1,19 @@
+{
+  "age": "{{29_Google Sheet Booking Update Webhook.body.user.age}}",
+  "name": "{{29_Google Sheet Booking Update Webhook.body.user.first_name}} {{29_Google Sheet Booking Update Webhook.body.user.last_name}}",
+  "type": "{{29_Google Sheet Booking Update Webhook.body.type}}",
+  "email": "{{29_Google Sheet Booking Update Webhook.body.user.email}}",
+  "phone": "{{29_Google Sheet Booking Update Webhook.body.user.phone}}",
+  "client": "{{29_Google Sheet Booking Update Webhook.body.client.name}}",
+  "doctor": "{{body.doctor}}",
+  "gender": "{{29_Google Sheet Booking Update Webhook.body.user.gender}}",
+  "status": "{{29_Google Sheet Booking Update Webhook.body.status}}",
+  "vendor": "{{29_Google Sheet Booking Update Webhook.body.vendor}}",
+  "package": "{{29_Google Sheet Booking Update Webhook.body.package}}",
+  "priority": "{{29_Google Sheet Booking Update Webhook.body.priority}}",
+  "booking_id": "{{29_Google Sheet Booking Update Webhook.body.id}}",
+  "changed_by": "{{29_Google Sheet Booking Update Webhook.body.changedBy.first_name}} {{29_Google Sheet Booking Update Webhook.body.changedBy.last_name}}",
+  "created_at": "{{29_Google Sheet Booking Update Webhook.body.created_at}}",
+  "assigned_to": "{{29_Google Sheet Booking Update Webhook.body.assignedTo.name}}",
+  "scheduled_date": "{{29_Google Sheet Booking Update Webhook.body.collection_1_date}}"
+}
