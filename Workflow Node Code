@@ -1,0 +1,59 @@
+{
+                "id": "RC2025111817",
+                "type": "pharmacy",
+                "virtual_type": null,
+                "status": "cancelled",
+                "tat": null,
+                "priority": "high",
+                "collection_1_date": "2025-11-18T00:00:00.000Z",
+                "collection_1_slot": null,
+                "created_at": "2025-11-18T05:13:58.288Z",
+                "user": {
+                    "id": 653427,
+                    "first_name": "pavan",
+                    "last_name": "test1",
+                    "age": 27,
+                    "gender": "male",
+                    "phone": "9505698990",
+                    "secondary_phone": null,
+                    "email": "pavankumarraphacure@gmail.com",
+                    "image": "https://raphacure-public-images.s3.ap-south-1.amazonaws.com/653427-1762860144178.png",
+                    "parent": {},
+                    "client": {}
+                },
+                "doctor": {},
+                "vendor": {},
+                "package": {},
+                "client_order": {
+                    "client": {}
+                },
+                "client": {
+                    "name": "Edme Insurance Broker Ltd."
+                },
+                "test_type": null,
+                "assignedTo": {
+                    "id": 116913,
+                    "name":"Demo",
+                    "email":"abc@gmail.com"
+                },
+                "changedBy": {
+                    "id": 653427,
+                    "first_name": "pavan",
+                    "last_name": "test1"
+                },
+                "bookingsWallets": [
+                    {
+                        "id": 8148,
+                        "booking_id": "RC2025111817",
+                        "client_wallet_id": "1195",
+                        "active_status": "deleted",
+                        "amount_used": 119,
+                        "percentage_applied": 0,
+                        "user_id": "653427",
+                        "created_at": "2025-11-18T05:13:58.294Z",
+                        "updated_at": "2025-11-18T05:53:25.446Z",
+                        "changed_by": null,
+                        "discounted_amount": "119.00"
+                    }
+                ]
+            }
